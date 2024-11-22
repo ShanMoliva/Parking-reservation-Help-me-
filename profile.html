@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Page</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <!-- jQuery library -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.slim.min.js"></script>
+    <!-- Popper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <!-- Latest compiled JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="profile-style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <a class="navbar-brand" href="#">EASYPARK</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="Parkmanager.html">Reservation</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="admin.html">Admin Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Contact</a>
+                </li>
+            </ul>
+            <!-- Search bar and user dropdown -->
+            <form class="form-inline my-2 my-lg-0 mr-3">
+                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+            </form>
+            <!-- User dropdown menu -->
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span id="username">Username</span> <!-- Username placeholder -->
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                        <a class="dropdown-item" href="profile.html" id="profileBtn">Profile</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#" id="LogOutbutton">Logout</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <section class="vh-100" style="background-color: #f4f5f7;">
+        <div class="container py-5 h-100">
+            <div class="row d-flex justify-content-center align-items-center h-100">
+                <div class="col col-lg-6 mb-4 mb-lg-0">
+                    <div class="card mb-3" style="border-radius: .5rem;">
+                        <div class="row g-0">
+                            <div class="col-md-4 gradient-custom text-center text-white" style="border-top-left-radius: .5rem; border-bottom-left-radius: .5rem;">
+                                <img id="profilePic" src="" alt="ProfilePic" class="img-fluid my-5" style="width: 80px;" /> <!-- Profile picture -->
+                                <h5 id="usernameDisplay"></h5> <!-- Dynamic username -->
+                                <i class="far fa-edit mb-5"></i>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card-body p-4">
+                                    <h6>Information</h6>
+                                    <hr class="mt-0 mb-4">
+                                    <div class="row pt-1">
+                                        <div class="col-6 mb-3">
+                                            <h6>Email</h6>
+                                            <p class="text-muted" id="userEmail"></p> <!-- Dynamic email -->
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <h6>Role</h6>
+                                            <p class="text-muted" id="userRole"></p> <!-- Display user role -->
+                                        </div>
+                                    </div>
+                                    <hr class="mt-0 mb-4">
+                                    <div class="row pt-1">
+                                        <div class="col-12 mb-3">
+                                            <div>
+                                                <form class="form-inline my-2 my-lg-0 mr-3">
+                                                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Edit</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+ <!-- New buttons outside the card -->
+<div class="d-flex justify-content-between mt-3">
+    <a href="#" id="becomeParkingManagerButton" class="btn btn-primary">Become Parking Manager</a>
+    <a href="Parkmanager.html" id="parkingManagerDashboardButton" class="btn btn-secondary disabled">Parking Manager Dashboard</a>
+    <a href="analytics.html" id="analysis" class="btn btn-secondary">analysis</a>
+</div>
+<script type="module">
+import { auth, database, getUserData, sendAdminRequest } from './auth.js'; 
+    import { ref, set } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js'; 
+    
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const userId = user.uid;
+                const userData = await getUserData(userId);
+
+                if (userData) {
+                    // Update the profile UI
+                    document.getElementById('profilePic').src = userData.profilePic || 'defaultPic.jpg'; // Fallback
+                    document.getElementById('usernameDisplay').textContent = userData.fullName;
+                    document.getElementById('userEmail').textContent = userData.email;
+                    document.getElementById('userRole').textContent = userData.role || 'User'; // Fallback to 'User' if undefined
+                    document.getElementById('username').textContent = userData.fullName;
+                    
+                    // Check if the user is a parking manager
+                    const parkingManagerDashboardButton = document.getElementById('parkingManagerDashboardButton');
+                    if (userData.role === 'parkingManager') {
+                        parkingManagerDashboardButton.classList.remove('disabled'); // Enable the button
+                        parkingManagerDashboardButton.href = 'Parkmanager.html'; // Set the correct link
+                    } else {
+                        parkingManagerDashboardButton.href = '#'; // Keep it disabled by default
+                    }
+                } else {
+                    console.error("No user data found.");
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Logout functionality
+        const logOutButton = document.getElementById('LogOutbutton');
+        logOutButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                await auth.signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error("Logout error:", error);
+            }
+        });
+
+        // Event listener for the Become Parking Manager button
+        const becomeParkingManagerButton = document.getElementById('becomeParkingManagerButton');
+        becomeParkingManagerButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            if (auth.currentUser) { // Check if user is authenticated
+                const userId = auth.currentUser.uid;
+
+                try {
+                    // Fetch user data to get the full name
+                    const userData = await getUserData(userId);
+                    
+                    // Send admin request using the sendAdminRequest function
+                    const requestSent = await sendAdminRequest(userId, userData.fullName);
+                    
+                    if (requestSent) {
+                        alert('Your request to become a Parking Manager has been sent!');
+                    } else {
+                        alert('Failed to send your request. Please try again later.');
+                    }
+                } catch (error) {
+                    console.error("Error processing request:", error);
+                    alert('There was an error sending your request. Please try again later.');
+                }
+            } else {
+                alert('You need to be logged in to send a request.');
+            }
+        });
+    });
+</script>

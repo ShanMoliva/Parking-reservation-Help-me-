@@ -1,0 +1,38 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.navbar {
+    width: 100%;
+    height: 80px; /* Fixed height for navbar */
+    z-index: 1000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: #333; /* Optional for visibility */
+}
+
+.content {
+    padding-top: 120px; /* Adjust to make room for navbar */
+    text-align: center;
+    padding: 20px;
+}
+
+.chart-container {
+    width: 70%; /* Set width of chart */
+    margin: 20px auto; /* Center with spacing */
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    position: relative;
+    z-index: 999; /* Ensure it's above navbar */
+}
+
+#peakReservationChart {
+    width: 100%;
+    height: 400px; /* Ensure it's visible */
+    display: block;
+    margin: 0 auto;
+}

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Register</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="reg-style.css">
+</head>
+<body>
+    <div class="form-container" id="MainForm">
+        <h2>Register</h2>
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="EmailInp">Email address</label>
+                <input type="email" class="form-control" id="EmailInp" placeholder="Enter email" required>
+            </div>
+            <div class="form-group">
+                <label for="PasswordInp">Password</label>
+                <input type="password" class="form-control" id="PasswordInp" placeholder="Password" required>
+            </div>
+            <div class="form-group">
+                <label for="FullnameInp">Full Name</label>
+                <input type="text" class="form-control" id="FullnameInp" placeholder="Enter full name" required>
+            </div>
+            <div class="form-group">
+                <label for="RoleInp">Role</label>
+                <input type="text" class="form-control" id="RoleInp" value="user" readonly>
+            </div>
+            <div class="form-group">
+                <label for="ProfilePicInp">Profile Picture</label>
+                <input type="file" class="form-control-file" id="ProfilePicInp" accept="image/*" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Create New User</button>
+            <a href="login.html"><button type="button" class="btn btn-secondary">Login</button></a>
+        </form>
+
+        <script type="module">
+            import { auth, registerUser } from './auth.js'; // Ensure you import registerUser
+
+            const registerForm = document.getElementById('registerForm');
+            
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const email = document.getElementById('EmailInp').value;
+                const password = document.getElementById('PasswordInp').value;
+                const fullName = document.getElementById('FullnameInp').value;
+                const role = document.getElementById('RoleInp').value;
+                const profilePic = document.getElementById('ProfilePicInp').files[0];
+                
+                try {
+                    // Call your custom registerUser function
+                    const user = await registerUser(email, password, fullName, role, profilePic);
+                    alert('User registered successfully!');
+
+                      // Redirect to login.html after registration
+            window.location.href = 'login.html';
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>
+    

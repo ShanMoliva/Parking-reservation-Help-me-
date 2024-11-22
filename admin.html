@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="admin-style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <a class="navbar-brand" href="#">EASYPARK</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="Parkmanager.html">Reservation</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Users</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Reports</a>
+                </li>
+            </ul>
+            <form class="form-inline my-2 my-lg-0 mr-3">
+                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+            </form>
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span id="username">Username</span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                        <a class="dropdown-item" href="profile.html">Profile</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#" id="LogOutbutton">Logout</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="container-fluid" style="margin-top: 70px;">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+                <div class="sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">
+                                <span data-feather="home"></span>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <span data-feather="file"></span>
+                                Inbox
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <span data-feather="users"></span>
+                                Manage Users
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <span data-feather="bar-chart-2"></span>
+                                Reports
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content area -->
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Dashboard</h1>
+                </div>
+
+                <h4>Inbox</h4>
+                <div class="inbox-list">
+                    <ul class="list-group" id="inboxRequests">
+                        <!-- Dynamic content for inbox requests will be populated here -->
+                    </ul>
+                </div>
+
+                <h4 class="mt-5">Manage Users</h4>
+                <div class="users-list">
+                    <ul class="list-group" id="usersList">
+                        <!-- Dynamic content for users will be populated here -->
+                    </ul>
+                </div>
+
+                <h4 class="mt-5">Reports</h4>
+                <p>Dynamic</p>
+            </main>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, database, getUserData } from './auth.js';
+        import { ref, onValue, set, get } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js';
+    
+        document.addEventListener('DOMContentLoaded', async () => {
+            let authUnsubscribe = null;
+    
+            try {
+                authUnsubscribe = auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        const userId = user.uid;
+    
+                        try {
+                            const userData = await getUserData(userId);
+                            if (userData) {
+                                document.getElementById('username').textContent = userData.fullName;
+    
+                                if (userData.role !== 'admin') {
+                                    window.location.href = 'home.html';
+                                }
+                                
+                                // Fetch role change requests for the admin
+                                fetchRoleChangeRequests();
+                            } else {
+                                window.location.href = 'home.html';
+                            }
+                        } catch (error) {
+                            console.error("Error fetching user data:", error);
+                            window.location.href = 'home.html'; // Fail-safe redirect
+                        }
+                    } else {
+                        window.location.href = 'login.html';
+                    }
+                });
+    
+                // Logout functionality
+                const logOutButton = document.getElementById('LogOutbutton');
+                if (logOutButton) {
+                    logOutButton.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        try {
+                            await auth.signOut();
+                            window.location.href = 'login.html';
+                        } catch (error) {
+                            console.error("Logout error:", error);
+                        }
+                    });
+                }
+            } catch (globalError) {
+                console.error("Global error in script execution:", globalError);
+            }
+    
+            // Clean-up auth state change listener when the page is unloaded
+            window.addEventListener('beforeunload', () => {
+                if (authUnsubscribe) authUnsubscribe();
+            });
+        });
+    
+       // Function to fetch role change requests
+const fetchRoleChangeRequests = () => {
+    const requestsRef = ref(database, 'adminRequests');
+    onValue(requestsRef, (snapshot) => {
+        const requestsList = document.getElementById('inboxRequests');
+        requestsList.innerHTML = ''; // Clear previous entries
+
+        snapshot.forEach((childSnapshot) => {
+            const request = childSnapshot.val();
+            const listItem = document.createElement('li');
+            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+            listItem.innerHTML = `
+                <span>${request.username} wants to change role</span>
+                <div>
+                    <button class="btn btn-accept btn btn-success" onclick="handleRequest('${childSnapshot.key}', 'accept')">Accept</button>
+                    <button class="btn btn-reject btn btn-danger" onclick="handleRequest('${childSnapshot.key}', 'reject')">Reject</button>
+                </div>
+            `;
+            requestsList.appendChild(listItem);
+        });
+
+        // Debugging: Check if elements are being appended
+        console.log(requestsList.innerHTML); 
+    }, (error) => {
+        console.error("Error fetching role change requests:", error);
+    });
+};
+
+    
+        // Function to handle request acceptance or rejection
+        window.handleRequest = async (requestId, action) => {
+            const requestRef = ref(database, `adminRequests/${requestId}`);
+            const requestDataSnapshot = await get(requestRef);
+    
+            if (!requestDataSnapshot.exists()) {
+                alert('Request not found. Please refresh the page.');
+                return; // Exit if the request does not exist
+            }
+    
+            const requestData = requestDataSnapshot.val(); // Fetch the request data
+    
+            if (action === 'accept') {
+                // Ask for confirmation before accepting the request
+                if (!confirm('Are you sure you want to accept this request?')) {
+                    return; // Exit if the admin does not confirm
+                }
+    
+                const userId = requestData.userId; // Get userId from the request data
+    
+                // Update the user's role to 'parkingManager'
+                const userRoleRef = ref(database, `users/${userId}/role`);
+                try {
+                    await set(userRoleRef, 'parkingManager'); // Set the new role
+                    
+                    // Remove the request from the adminRequests
+                    await set(requestRef, null); 
+                    alert('Request accepted. User role updated to Parking Manager.');
+                } catch (error) {
+                    console.error("Error updating user role:", error);
+                    alert('Failed to update user role. Please try again.');
+                }
+            } else if (action === 'reject') {
+                try {
+                    await set(requestRef, null); // Remove the request
+                    alert('Request rejected.');
+                } catch (error) {
+                    console.error("Error rejecting request:", error);
+                    alert('Failed to reject the request. Please try again.');
+                }
+            }
+        };
+    </script>
+    
+</body>
+</html>
