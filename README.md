@@ -1,3 +1,2 @@
-PLEASE HELP ME I AM DESPERATE!
-
-PLEASE READ THE README FILE INSIDE THE MAIN FOLDER.
+I am having trouble making the slots persist in my parkingmanager.html, slots disappears when page reloads
+what am I doing wrong? please help.
