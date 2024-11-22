@@ -1,0 +1,26 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.navbar {
+    width: 100%;
+    z-index: 1000;
+}
+
+.content {
+    padding-top: 80px;
+    text-align: center;
+    padding: 100px;
+}
+
+.gradient-custom {
+    background: linear-gradient(to right bottom, rgba(246, 211, 101, 1), rgba(253, 160, 133, 1));
+}
+
+.smallButton {
+    background-color: orange; 
+    color: white; 
+    margin-left: 5px;
+    width: 100%; /* Ensure the button takes the full width */
+}

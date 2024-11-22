@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="reg-style.css">
+</head>
+<body>
+    <div class="form-container" id="MainForm">
+        <h2>Login</h2>
+        <form id="loginForm"> <!-- Ensure this ID matches your JavaScript -->
+            <div class="form-group">
+                <label for="EmailInp">Email address</label>
+                <input type="email" class="form-control" id="EmailInp" placeholder="Enter email" required>
+            </div>
+            <div class="form-group">
+                <label for="PasswordInp">Password</label>
+                <input type="password" class="form-control" id="PasswordInp" placeholder="Password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+            <a href="Register.html"><button type="button" class="btn btn-primary">Register</button></a>
+        </form>
+    </div>
+
+    <script type="module">
+ import { auth, loginUser } from './auth.js'; // Import necessary functions
+
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('EmailInp').value;
+            const password = document.getElementById('PasswordInp').value;
+            
+            try {
+                // Call your custom loginUser function
+                const user = await loginUser(email, password);
+                alert('Login successful!');
+                
+                // Redirect to home.html after successful login
+                window.location.href = 'Parkmanager.html';
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        });
+    } else {
+        console.error("Element with ID 'loginForm' not found.");
+    }
+});
+    </script>
+</body>
+</html>

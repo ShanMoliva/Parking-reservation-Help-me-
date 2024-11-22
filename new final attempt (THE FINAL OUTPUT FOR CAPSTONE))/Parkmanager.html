@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking Manager</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="parkmanager.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <a class="navbar-brand" href="#">EASYPARK</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="Parkmanager.html">Reservation</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="admin.html">Admin Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Contact</a>
+                </li>
+            </ul>
+            <!-- Search bar and user dropdown -->
+            <form class="form-inline my-2 my-lg-0 mr-3">
+                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+            </form>
+            <!-- User dropdown menu -->
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span id="username">Username</span> <!--dynamic -->
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                        <a class="dropdown-item" href="profile.html" id="profileBtn">Profile</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#" id="LogOutbutton">Logout</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 80px;">
+        <!-- Parking Reservation Section 1 -->
+        <div class="row">
+            <div class="col-md-6"> <!-- Left Column for Image --> <!--display image-->
+                <div class="mb-3">
+                    <img src="https://via.placeholder.com/150" class="img-fluid" id="parkingImage" alt="Parking Image" 
+     style="width: 300px; height: 200px; object-fit: cover; display: none;"> <!-- Initially hidden -->
+                         <label for="imageInput" class="form-label"></label>
+                         <input type="file" class="form-control" id="imageInput" accept="image/*">
+                </div>
+            </div>
+            
+            <div class="col-md-6"> <!-- Right Column for Address and Capacity -->
+                <div class="card">
+                    <h5 class="card-title">Parking Reservation</h5>
+                    <!-- Address Structure -->
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address:<span id="savedAddressDisplay" class="mt-2" style="color: black;"></span></label>
+                        <input type="text" class="form-control" id="addressInput" placeholder="Enter address">
+                    </div>                                    
+                    <div class="mb-3">
+                        <label for="capacity" class="form-label">Capacity: <span id="capacityCount">0</span></label><!--Ignore-->
+                    </div>
+                    <div class="mb-3">
+                        <label for="reserved" class="form-label">Reserved: <span id="reservedCount">0</span></label><!--Ignore-->
+                    </div>
+                    <!-- Button for saving -->
+                    <div class="button-group">
+                        <button class="btn btn-success" id="saveButton2">Save</button> <!--SAVE RESERVATION TO THE DATABASE-->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>   
+<!-- Parking Slots Section 2 -->
+<div class="row mt-4 button-group"> <!-- Combined classes here -->
+    <div class="col-md-12">
+        <div class="card parking-slots-section"> <!-- Add your class here -->
+            <h5 class="card-title">Parking Slots</h5>
+            <div class="button-group">
+                <button class="btn btn-info mt-3 button-fixed-width" id="addSlotButton">Add Slot</button> <!--CREATE SLOT TO THE DATABASE-->
+            </div>
+            <!-- Move the slotsContainer div below the button group -->
+            <div id="slotsContainer" class="slots-container mt-3"></div> <!-- This will contain the slot cards -->
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { auth, database, storage } from './firebaseconfig.js';
+import { ref, set, get, update, push, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+// References to HTML elements
+const imageInput = document.getElementById('imageInput');
+const parkingImage = document.getElementById('parkingImage');
+const addressInput = document.getElementById('addressInput');
+const saveButton2 = document.getElementById('saveButton2');
+
+// Global variable for authenticated user
+let user = null;
+
+// Track uploaded image file
+let uploadedImageFile = null;
+
+let reservationKey; // Declare globally
+
+async function loadReservationData() {
+    const user = auth.currentUser; // Get the current authenticated user
+    if (user) {
+        const userId = user.uid;
+        const reservationsRef = ref(database, `reservations/${userId}`);
+
+        try {
+            const snapshot = await get(reservationsRef);
+
+            if (snapshot.exists()) {
+                const reservationData = snapshot.val(); // Fetch the reservation data
+                console.log("Loaded reservation data for user:", reservationData);
+
+                // Assuming there's only one reservation per user
+                const reservationKey = Object.keys(reservationData)[0];
+                console.log("Fetched reservation key:", reservationKey);
+
+                const reservationDetails = reservationData[reservationKey];
+                console.log("Fetched reservation details:", reservationDetails);
+
+                if (!reservationDetails) {
+                    console.error("No reservation details found.");
+                    return;
+                }
+
+                // Update the address and image in the UI
+                const addressElement = document.getElementById('savedAddressDisplay');
+                const parkingImageElement = document.getElementById('parkingImage');
+
+                addressElement.innerText = reservationDetails.address || "No address available";
+                if (reservationDetails.imageUrl) {
+                    parkingImageElement.src = reservationDetails.imageUrl;
+                    parkingImageElement.style.display = 'block';
+                } else {
+                    parkingImageElement.style.display = 'none'; // Hide image element if no image URL is available
+                }
+
+                console.log(`Address fetched and displayed: ${reservationDetails.address}`);
+                console.log(`Image URL fetched and displayed: ${reservationDetails.imageUrl}`);
+
+                // Add this line to persist the reservation details on the UI
+                sessionStorage.setItem('reservationDetails', JSON.stringify(reservationDetails));
+
+                // Load slots for this reservation
+                if (reservationDetails.slots) {
+                    const slotsContainer = document.getElementById('slotsContainer');
+                    slotsContainer.innerHTML = ""; // Clear previous slots
+                    for (const slotId in reservationDetails.slots) {
+                        if (reservationDetails.slots.hasOwnProperty(slotId)) {
+                            const slot = reservationDetails.slots[slotId];
+                            createSlotCard(slot, slotId, userId);
+                        }
+                    }
+                } else {
+                    console.log("No slots found for this reservation.");
+                }
+
+                // Listen to slot changes for real-time updates
+                listenToSlotChanges(userId, reservationKey);
+
+            } else {
+                console.log("No reservations found for the user.");
+            }
+        } catch (error) {
+            console.error("Error loading reservation data:", error);
+        }
+    } else {
+        console.log("User not authenticated. Cannot load reservation data.");
+    }
+}
+
+
+// Authentication State Listener
+onAuthStateChanged(auth, async (currentUser) => {
+    if (currentUser) {
+        // User is logged in
+        console.log("User logged in:", currentUser);
+        user = currentUser;
+        const userId = currentUser.uid; // Get the user's unique ID
+        await updateUsername(userId);  // Fetch and update username in the navbar
+        loadReservationData(); // Load reservation data after login
+        listenToSlotChanges(userId, reservationKey); // Setup slot listener
+    } else {
+        // User is not logged in
+        console.log("No user logged in");
+        alert("You are not logged in. Please log in to use the reservation features.");
+        window.location.href = "login.html"; // Redirect to login page
+    }
+});
+
+// Function to fetch username and update the navbar
+async function updateUsername(userId) {
+    const usernameElement = document.getElementById('username');
+    try {
+        // Fetch user data from the database
+        const userRef = ref(database, `users/${userId}`);
+        const snapshot = await get(userRef);
+
+        if (snapshot.exists()) {
+            const userData = snapshot.val();
+            const fullName = userData.fullName; // Assuming 'fullName' is the field in your database
+            usernameElement.innerText = fullName || 'User'; // Display full name or a fallback
+            console.log("Username updated to:", fullName);
+        } else {
+            console.error("User data not found in the database.");
+            usernameElement.innerText = 'User'; // Default fallback
+        }
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        usernameElement.innerText = 'User'; // Default fallback in case of error
+    }
+}
+
+// Preview uploaded image
+imageInput.addEventListener('change', (e) => {
+    uploadedImageFile = e.target.files[0];
+    if (uploadedImageFile) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            parkingImage.src = reader.result;
+            parkingImage.style.display = 'block';
+        };
+        reader.readAsDataURL(uploadedImageFile);
+    }
+});
+
+saveButton2.addEventListener('click', async () => {
+    const address = addressInput.value.trim();
+
+    if (!address || !uploadedImageFile) {
+        alert('Please provide both an address and an image.');
+        return;
+    }
+
+    try {
+        const user = auth.currentUser; // Get the current authenticated user
+        if (user) {
+            const userId = user.uid;
+            const ownerEmail = user.email;
+
+            // Upload the image to Firebase Storage
+            const storagePath = `reservations/${userId}/${uploadedImageFile.name}`;
+            const imageRef = storageRef(storage, storagePath);
+            await uploadBytes(imageRef, uploadedImageFile);
+            const imageUrl = await getDownloadURL(imageRef);
+
+            // Reference to the user's reservations
+            const reservationsRef = ref(database, `reservations/${userId}`);
+
+            // Get existing reservations
+            const snapshot = await get(reservationsRef);
+
+            let reservationRef;
+            if (snapshot.exists()) {
+                // If reservation exists, update the first one found
+                const reservationData = snapshot.val();
+                const reservationKey = Object.keys(reservationData)[0];
+                reservationRef = ref(database, `reservations/${userId}/${reservationKey}`);
+            } else {
+                // If no reservation exists, create a new one
+                reservationRef = push(reservationsRef);
+            }
+
+            const reservationData = {
+                address: address,
+                imageUrl: imageUrl,
+                ownerId: userId,
+                ownerEmail: ownerEmail,
+                slots: {}
+            };
+
+            await set(reservationRef, reservationData);
+
+            alert('Reservation saved successfully!');
+            // Optionally clear inputs
+            addressInput.value = '';
+            parkingImage.style.display = 'none';
+            imageInput.value = '';
+
+            loadReservationData(); // Reload data to reflect changes
+        } else {
+            alert('You must be logged in to save a reservation.');
+        }
+    } catch (error) {
+        console.error('Error saving reservation:', error);
+        alert('Failed to save reservation. Please try again.');
+    }
+});
+
+
+// I JUST PASTED THIS AND IT SUDDENLY WORKS-ISH
+
+//slot-handler.js
+const slotsContainer = document.getElementById('slotsContainer');
+const addSlotButton = document.getElementById('addSlotButton');
+
+
+// Function to create a slot card dynamically
+function createSlotCard(slot, slotId, ownerId) {
+    
+    const slotDiv = document.createElement('div');
+    slotDiv.className = 'slot-card';
+    slotDiv.style.border = '1px solid #ccc';
+    slotDiv.style.padding = '10px';
+    slotDiv.style.marginBottom = '10px';
+
+    const usernamePlaceholder = document.createElement('p');
+    usernamePlaceholder.innerText = `Username: ${slot.userId === 'placeholder' ? 'Not Reserved' : slot.userId}`;
+    usernamePlaceholder.className = 'username-placeholder';
+
+    const timestampPlaceholder = document.createElement('p');
+    timestampPlaceholder.innerText = `Timestamp: ${slot.timestamp || 'Not Reserved'}`;
+    timestampPlaceholder.className = 'timestamp-placeholder';
+
+    const reserveButton = document.createElement('button');
+    reserveButton.innerText = 'Reserve';
+    reserveButton.className = 'btn btn-success';
+    reserveButton.style.marginRight = '5px';
+    reserveButton.disabled = slot.isOccupied; // Disable if already reserved
+
+    const exitButton = document.createElement('button');
+    exitButton.innerText = 'Exit';
+    exitButton.className = 'btn btn-danger';
+    exitButton.disabled = !slot.isOccupied; // Disable if not reserved
+
+    slotDiv.appendChild(usernamePlaceholder);
+    slotDiv.appendChild(timestampPlaceholder);
+    slotDiv.appendChild(reserveButton);
+    slotDiv.appendChild(exitButton);
+
+    slotsContainer.appendChild(slotDiv);
+
+    // Add event listeners for reserve and exit actions
+    reserveButton.addEventListener('click', () => handleReserve(slotDiv, slotId, ownerId));
+    exitButton.addEventListener('click', () => handleExit(slotDiv, slotId, ownerId));
+}
+
+function listenToSlotChanges(userId, reservationId) {
+    const slotsRef = ref(database, `reservations/${userId}/${reservationId}/slots`);
+    onValue(slotsRef, (snapshot) => {
+        const slotsData = snapshot.val();
+        console.log("Real-time slot data:", slotsData);
+
+        const slotsContainer = document.getElementById('slotsContainer');
+
+        // If no slots, clear the container and return
+        if (!slotsData) {
+            console.log("No slots available.");
+            slotsContainer.innerHTML = ""; // Clear all slots
+            return;
+        }
+
+        // Iterate through slots and update or add them to the UI
+        for (const slotId in slotsData) {
+            if (slotsData.hasOwnProperty(slotId)) {
+                const slot = slotsData[slotId];
+                let existingSlot = document.getElementById(`slot-${slotId}`);
+                
+                // Update existing slot if already in the UI
+                if (existingSlot) {
+                    const usernamePlaceholder = existingSlot.querySelector('.username-placeholder');
+                    const timestampPlaceholder = existingSlot.querySelector('.timestamp-placeholder');
+                    usernamePlaceholder.innerText = `Username: ${slot.userId === 'placeholder' ? 'Not Reserved' : slot.userId}`;
+                    timestampPlaceholder.innerText = `Timestamp: ${slot.timestamp || 'Not Reserved'}`;
+                } else {
+                    // Add new slot if it doesn't exist in the UI
+                    createSlotCard(slot, slotId, userId);
+                }
+            }
+        }
+    });
+}
+
+
+
+// Update slot UI with real-time data
+function updateSlotCard(slot, slotId) {
+    const slotDiv = document.getElementById(`slot-${slotId}`);
+    if (slotDiv) {
+        const usernamePlaceholder = slotDiv.querySelector('.username-placeholder');
+        const timestampPlaceholder = slotDiv.querySelector('.timestamp-placeholder');
+        usernamePlaceholder.innerText = `Username: ${slot.userId === 'placeholder' ? 'Not Reserved' : slot.userId}`;
+        timestampPlaceholder.innerText = `Timestamp: ${slot.timestamp || 'Not Reserved'}`;
+    }
+}
+
+// Add Slot Button Event Listener
+addSlotButton.addEventListener('click', () => {
+    createSlot();
+});
+
+// Function to Create a New Slot and Save to Database
+function createSlot() {
+    if (!user) {
+        alert('You must be logged in to add a slot.');
+        return;
+    }
+
+    // Create slot elements
+    const slotDiv = document.createElement('div');
+    slotDiv.className = 'slot-card';
+    slotDiv.style.border = '1px solid #ccc';
+    slotDiv.style.padding = '10px';
+    slotDiv.style.marginBottom = '10px';
+
+    // Username placeholder
+    const usernamePlaceholder = document.createElement('p');
+    usernamePlaceholder.innerText = 'Username: Not Reserved';
+    usernamePlaceholder.className = 'username-placeholder';
+
+    // Timestamp placeholder
+    const timestampPlaceholder = document.createElement('p');
+    timestampPlaceholder.innerText = 'Timestamp: Not Reserved';
+    timestampPlaceholder.className = 'timestamp-placeholder';
+
+    // Reserve Button
+    const reserveButton = document.createElement('button');
+    reserveButton.innerText = 'Reserve';
+    reserveButton.className = 'btn btn-success';
+    reserveButton.style.marginRight = '5px';
+
+    // Exit Button
+    const exitButton = document.createElement('button');
+    exitButton.innerText = 'Exit';
+    exitButton.className = 'btn btn-danger';
+
+    // Append elements to the slot
+    slotDiv.appendChild(usernamePlaceholder);
+    slotDiv.appendChild(timestampPlaceholder);
+    slotDiv.appendChild(reserveButton);
+    slotDiv.appendChild(exitButton);
+
+    // Append the slot to the correct container
+    const slotsContainer = document.getElementById('slotsContainer');
+    slotsContainer.appendChild(slotDiv);
+
+    // Generate a unique slot ID
+    const slotId = `slot_${Date.now()}`;
+
+    // Save the new slot to Firebase (initially unoccupied)
+    const slotRef = ref(database, `reservations/${user.uid}/slots/${slotId}`);
+    set(slotRef, {
+        userId: "placeholder",
+        isOccupied: false,
+        timestamp: ""
+    }).then(() => {
+        console.log(`Slot created and saved: ${slotId}`);
+    }).catch((error) => {
+        console.error('Error saving new slot:', error);
+    });
+
+    // Attach Event Listeners to Buttons
+    reserveButton.addEventListener('click', () => handleReserve(slotDiv, slotId));
+    exitButton.addEventListener('click', () => handleExit(slotDiv, slotId));
+}
+
+
+function handleReserve(slotDiv, slotId) {
+    if (!user) {
+        alert('You must be logged in to reserve a slot.');
+        return;
+    }
+
+    // Get current timestamp
+    const timestamp = new Date().toISOString(); // Use ISO format for consistency
+
+    // Update UI directly
+    const usernamePlaceholder = slotDiv.querySelector('.username-placeholder');
+    const timestampPlaceholder = slotDiv.querySelector('.timestamp-placeholder');
+
+    // Update the UI with the reserved username and timestamp
+    usernamePlaceholder.innerText = `Username: ${user.email}`;
+    timestampPlaceholder.innerText = `Timestamp: ${timestamp}`;
+
+    // Save to Firebase without reloading all data
+    const slotRef = ref(database, `reservations/${user.uid}/slots/${slotId}`);
+    update(slotRef, {
+        userId: user.uid,
+        isOccupied: true,
+        timestamp
+    }).then(() => {
+        console.log(`Slot reserved: ${slotId}`);
+    }).catch((error) => {
+        console.error('Error reserving slot:', error);
+    });
+}
+
+
+function handleExit(slotDiv, slotId) {
+    if (!user) {
+        alert('You must be logged in to exit a slot.');
+        return;
+    }
+
+    // Update UI directly to show that the slot is not reserved
+    const usernamePlaceholder = slotDiv.querySelector('.username-placeholder');
+    const timestampPlaceholder = slotDiv.querySelector('.timestamp-placeholder');
+
+    usernamePlaceholder.innerText = 'Username: Not Reserved';
+    timestampPlaceholder.innerText = 'Timestamp: Not Reserved';
+
+    // Remove from Firebase without reloading all data
+    const slotRef = ref(database, `reservations/${user.uid}/slots/${slotId}`);
+    update(slotRef, {
+        userId: "placeholder",
+        isOccupied: false,
+        timestamp: ""
+    }).then(() => {
+        console.log(`Slot exited: ${slotId}`);
+    }).catch((error) => {
+        console.error('Error exiting slot:', error);
+    });
+}
+
+</script>
